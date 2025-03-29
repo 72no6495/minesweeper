@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マインスイーパー</title>
+    <style>
+        #grid {
+            border-collapse: collapse;
+        }
+
+        #grid td {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 20px;
+        }
+
+        .hidden {
+            background-color: #ccc;
+        }
+
+        .revealed {
+            background-color: #fff;
+        }
+
+        .mine {
+            background-color: red;
+        }
+
+        #game {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        #message {
+            margin: 10px 0;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+        }
+
+        #reset {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <table id="grid"></table>
+        <div id="message"></div>
+        <button id="reset">リセット</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('grid');
+            const message = document.getElementById('message');
+            const resetButton = document.getElementById('reset');
+            const rows = 10;
+            const cols = 10;
+            const mines = 10;
+            let board = []; // ゲーム盤のデータを保持
+            let revealed = []; // セルの開封状態を保持
+            let gameOver = false;
+
+            // ゲームの初期化
+            function init() {
+                board = [];
+                revealed = [];
+                gameOver = false;
+                message.textContent = '';
+                grid.innerHTML = '';
+                for (let i = 0; i < rows; i++) {
+                    const tr = document.createElement('tr');
+                    board[i] = [];
+                    revealed[i] = [];
+                    for (let j = 0; j < cols; j++) {
+                        const td = document.createElement('td');
+                        td.classList.add('hidden');
+                        td.addEventListener('click', () => reveal(i, j));
+                        tr.appendChild(td);
+                        board[i][j] = 0; // 初期値は0
+                        revealed[i][j] = false;
+                    }
+                    grid.appendChild(tr);
+                }
+                placeMines(); // 爆弾を配置
+                calculateNumbers(); // 数字を計算
+            }
+
+            // 爆弾をランダムに配置
+            function placeMines() {
+                let placed = 0;
+                while (placed < mines) {
+                    const x = Math.floor(Math.random() * rows);
+                    const y = Math.floor(Math.random() * cols);
+                    if (board[x][y] !== 'M') {
+                        board[x][y] = 'M'; // 'M'は爆弾を表す
+                        placed++;
+                    }
+                }
+            }
+
+            // 各セルに隣接する爆弾の数を計算
+            function calculateNumbers() {
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        if (board[i][j] === 'M') continue;
+                        let count = 0;
+                        for (let di = -1; di <= 1; di++) {
+                            for (let dj = -1; dj <= 1; dj++) {
+                                const ni = i + di;
+                                const nj = j + dj;
+                                if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && board[ni][nj] === 'M') {
+                                    count++;
+                                }
+                            }
+                        }
+                        board[i][j] = count; // 爆弾の数を格納
+                    }
+                }
+            }
+
+            // セルをクリックしたときの処理
+            function reveal(x, y) {
+                if (gameOver || revealed[x][y]) return;
+                revealed[x][y] = true;
+                const cell = grid.rows[x].cells[y];
+                cell.classList.remove('hidden');
+                cell.classList.add('revealed');
+                if (board[x][y] === 'M') {
+                    cell.textContent = '💣'; // 爆弾を表示
+                    cell.classList.add('mine');
+                    gameOver = true;
+                    message.textContent = 'ゲームオーバー';
+                } else {
+                    cell.textContent = board[x][y] > 0 ? board[x][y] : ''; // 数字を表示（0は空欄）
+                    if (board[x][y] === 0) {
+                        // 隣接セルを自動で開く
+                        for (let di = -1; di <= 1; di++) {
+                            for (let dj = -1; dj <= 1; dj++) {
+                                const ni = x + di;
+                                const nj = y + dj;
+                                if (ni >= 0 && ni < rows && nj >= 0 && nj < cols) {
+                                    reveal(ni, nj);
+                                }
+                            }
+                        }
+                    }
+                    checkWin(); // 勝利判定
+                }
+            }
+
+            // 勝利条件のチェック
+            function checkWin() {
+                let allRevealed = true;
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        if (board[i][j] !== 'M' && !revealed[i][j]) {
+                            allRevealed = false;
+                            break;
+                        }
+                    }
+                    if (!allRevealed) break;
+                }
+                if (allRevealed) {
+                    gameOver = true;
+                    message.textContent = '勝利！';
+                }
+            }
+
+            // リセットボタンのイベントリスナー
+            resetButton.addEventListener('click', init);
+            init(); // ゲーム開始
+        });
+    </script>
+</body>
+</html>
